@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 
@@ -29,8 +30,18 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	void FindCapsuleComponent();
+	void UpdateCapsuleLocation();
+	// void UpdateVRRootLocation(FVector TranslationToApply);
+
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* Camera;
+
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* VRRoot;
+
+	UPROPERTY(VisibleAnywhere)
+	UCapsuleComponent* Collider;
 
 	void MoveForward(float throttle);
 	void MoveRight(float throttle);
