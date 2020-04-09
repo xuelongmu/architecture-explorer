@@ -101,13 +101,12 @@ void AVRCharacter::MoveRight(float throttle)
 
 void AVRCharacter::BeginTeleport()
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-
 	// only teleport if marker is at a valid location
-	if (PlayerController && DestinationMarker->bVisible)
+	if (DestinationMarker->bVisible)
 	{
+		StartFade(0, 1);
+
 		FTimerHandle Handle;
-		PlayerController->PlayerCameraManager->StartCameraFade(0, 1, FadeInDuration, FLinearColor::Black);
 		GetWorldTimerManager().SetTimer(Handle, this, &AVRCharacter::FinishTeleport, FadeInDuration);
 	}
 }
@@ -116,29 +115,19 @@ void AVRCharacter::FinishTeleport()
 {
 	FVector DestinationLocation = DestinationMarker->GetComponentLocation();
 	DestinationLocation.Z += GetCapsuleComponent()->GetScaledCapsuleHalfHeight(); // Avoid teleporting player into ground
-
 	SetActorLocation(DestinationLocation);
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 
-	if (PlayerController)
-	{
-		PlayerController->PlayerCameraManager->StartCameraFade(1, 0, FadeInDuration, FLinearColor::Black);
-	}
+	StartFade(1, 0);
 }
 
 void AVRCharacter::UpdateCharacterVRRootLocation()
 {
 	FVector NewCameraOffset = Camera->GetComponentLocation() - GetActorLocation();
-	// UE_LOG(LogTemp, Display, TEXT("Camera movement: %s"), *NewCameraOffset.ToString());
 
 	// Don't want the capsule to move vertically
 	NewCameraOffset.Z = 0;
 
-	// 	return;
-	// }
-	// Move collider to where the camera is
 	AddActorWorldOffset(NewCameraOffset);
-	// Collider->SetRelativeLocation(NewCameraOffset);
 
 	// Invert the vector and apply to VR Root to prevent positive feedback loop
 	FVector InvertCameraOffset = -NewCameraOffset;
@@ -150,10 +139,14 @@ void AVRCharacter::UpdateCharacterVRRootLocation()
 		return;
 	}
 	VRRoot->AddWorldOffset(InvertCameraOffset);
-	// VRRoot->SetRelativeLocation(InvertCameraOffset);
 }
 
-// void AVRCharacter::UpdateVRRootLocation(FVector TranslationToApply)
-// {
-// 	// VRRoot->SetRelativeLocation(TranslationToApply);
-// }
+void AVRCharacter::StartFade(float FromAlpha, float ToAlpha)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+	if (PlayerController)
+	{
+		PlayerController->PlayerCameraManager->StartCameraFade(FromAlpha, ToAlpha, FadeInDuration, FLinearColor::Black);
+	}
+}

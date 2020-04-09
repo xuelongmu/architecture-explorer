@@ -35,6 +35,7 @@ private:
 	bool FindTeleportDestination(FVector& OutLocation);
 	void UpdateDestinationMarker();
 	// void UpdateVRRootLocation(FVector TranslationToApply);
+	void StartFade(float FromAlpha, float ToAlpha);
 
 	void MoveForward(float throttle);
 	void MoveRight(float throttle);
