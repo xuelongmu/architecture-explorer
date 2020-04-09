@@ -3,9 +3,10 @@
 #pragma once
 
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/PlayerController.h"
 
 #include "VRCharacter.generated.h"
 
@@ -30,9 +31,15 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
-	void FindCapsuleComponent();
-	void UpdateCapsuleLocation();
+	void UpdateCharacterVRRootLocation();
+	bool FindTeleportDestination(FVector& OutLocation);
+	void UpdateDestinationMarker();
 	// void UpdateVRRootLocation(FVector TranslationToApply);
+
+	void MoveForward(float throttle);
+	void MoveRight(float throttle);
+	void BeginTeleport();
+	void FinishTeleport();
 
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* Camera;
@@ -41,8 +48,17 @@ private:
 	USceneComponent* VRRoot;
 
 	UPROPERTY(VisibleAnywhere)
-	UCapsuleComponent* Collider;
+	UStaticMeshComponent* DestinationMarker;
 
-	void MoveForward(float throttle);
-	void MoveRight(float throttle);
+	UPROPERTY(EditAnywhere)
+	float MaxTeleportDistance = 2000.f;
+
+	UPROPERTY(EditAnywhere)
+	FVector TeleportProjectionExtent = FVector(100.f, 100.f, 100.f);
+
+	UPROPERTY(EditAnywhere)
+	float FadeInDuration = 0.5f;
+
+	UPROPERTY(EditAnywhere)
+	float FadeOutDuration = 0.5f;
 };

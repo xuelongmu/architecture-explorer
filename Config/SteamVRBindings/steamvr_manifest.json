@@ -78,6 +78,10 @@
 			"requirement": "optional"
 		},
 		{
+			"name": "/actions/main/in/Teleport",
+			"type": "boolean"
+		},
+		{
 			"name": "/actions/main/in/VREditor_TriggerL axis",
 			"type": "vector1"
 		},
@@ -200,6 +204,7 @@
 			"/actions/main/out/vibrateleft": "Haptic (Left)",
 			"/actions/main/out/vibrateright": "Haptic (Right)",
 			"/actions/main/in/open_console": "Open Console",
+			"/actions/main/in/Teleport": "Teleport",
 			"/actions/main/in/VREditor_TriggerL axis": "VREditor_TriggerL",
 			"/actions/main/in/VREditor_TriggerR axis": "VREditor_TriggerR",
 			"/actions/main": "Main Game Actions"
