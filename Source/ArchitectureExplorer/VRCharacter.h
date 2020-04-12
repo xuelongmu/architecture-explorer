@@ -75,7 +75,13 @@ private:
 	UStaticMeshComponent* DestinationMarker;
 
 	UPROPERTY(EditAnywhere)
-	float MaxTeleportDistance = 2000.f;
+	float TeleportProjectileRadius = 5.f;
+
+	UPROPERTY(EditAnywhere)
+	float TeleportProjectileSpeed = 1000.f;
+
+	UPROPERTY(EditAnywhere)
+	float TeleportProjectileTime = 5.f;
 
 	UPROPERTY(EditAnywhere)
 	FVector TeleportProjectionExtent = FVector(100.f, 100.f, 100.f);

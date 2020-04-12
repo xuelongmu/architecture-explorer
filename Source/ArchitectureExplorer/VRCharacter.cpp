@@ -4,9 +4,9 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
+#include "Kismet/GameplayStatics.h"
 #include "NavigationSystem.h"
 #include "TimerManager.h"
-
 #define OUT
 
 // Sets default values
@@ -124,37 +124,28 @@ void AVRCharacter::UpdateDestinationMarker()
 
 bool AVRCharacter::FindTeleportDestination(FVector& OutLocation)
 {
-	// GetActorLocation(),
-	// GetActorLocation() + Camera->GetComponentRotation().Vector() * MaxTeleportDistance, // Calculate player reach
-	// UCapsuleComponent* MyCapsuleComponent = GetCapsuleComponent();
-	// if (MyCapsuleComponent)
-	// {
-	// 	UE_LOG(LogTemp, Display, TEXT("Capsule component name: %s"), *MyCapsuleComponent->GetName());
-	// 	UE_LOG(LogTemp, Display, TEXT("Owner name: %s"), *MyCapsuleComponent->GetOwner()->GetName());
-	// }
-	// else
-	// {
-	// 	UE_LOG(LogTemp, Display, TEXT("Capsule component NOT FOUND"))
-	// }
 	FVector ControllerForwardVector = LeftController->GetForwardVector();
-	UE_LOG(LogTemp, Display, TEXT("Controller forward vectors:%s"), *ControllerForwardVector.ToString());
+	// UE_LOG(LogTemp, Display, TEXT("Controller forward vectors:%s"), *ControllerForwardVector.ToString());
 	ControllerForwardVector = ControllerForwardVector.RotateAngleAxis(30, LeftController->GetRightVector());
 
-	FVector Start = LeftController->GetComponentLocation();
-	FVector End = Start + ControllerForwardVector * MaxTeleportDistance;
-
-	FHitResult Hit;
-	bool bHit = GetWorld()->LineTraceSingleByChannel(
-	    OUT Hit,
-	    Start,
-	    End,
-	    ECC_Visibility);
+	FPredictProjectilePathParams ParabolicParams = {
+	    TeleportProjectileRadius,
+	    LeftController->GetComponentLocation(),
+	    LeftController->GetForwardVector() * TeleportProjectileSpeed,
+	    5.f,
+	    ECollisionChannel::ECC_Visibility};
+	ParabolicParams.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+	ParabolicParams.bTraceWithCollision = true;
+	FPredictProjectilePathResult ParabolicResult;
+	bool bHit = UGameplayStatics::PredictProjectilePath(GetWorld(), ParabolicParams, OUT ParabolicResult);
 	if (!bHit)
 	{
 		return false;
 	}
+
+	UE_LOG(LogTemp, Display, TEXT("HitResult actor: %s"), *ParabolicResult.HitResult.Actor->GetName())
 	FNavLocation OutNavLocation;
-	bool bNav = UNavigationSystemV1::GetCurrent(GetWorld())->ProjectPointToNavigation(Hit.Location, OUT OutNavLocation, TeleportProjectionExtent);
+	bool bNav = UNavigationSystemV1::GetCurrent(GetWorld())->ProjectPointToNavigation(ParabolicResult.HitResult.Location, OUT OutNavLocation, TeleportProjectionExtent);
 	if (!bNav)
 	{
 		return false;
