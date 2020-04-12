@@ -3,10 +3,13 @@
 #pragma once
 
 #include "Camera/CameraComponent.h"
+#include "Components/PostProcessComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "MotionControllerComponent.h"
 
 #include "VRCharacter.generated.h"
 
@@ -41,9 +44,29 @@ private:
 	void MoveRight(float throttle);
 	void BeginTeleport();
 	void FinishTeleport();
+	void UpdateBlinker();
+	FVector2D GetBlinkerCenter();
 
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* Camera;
+
+	UPROPERTY(VisibleAnywhere)
+	UMotionControllerComponent* LeftController;
+
+	UPROPERTY(VisibleAnywhere)
+	UMotionControllerComponent* RightController;
+
+	UPROPERTY(VisibleAnywhere)
+	UPostProcessComponent* PostProcessComponent;
+
+	UPROPERTY(EditAnywhere)
+	UMaterialInterface* BlinkerMaterialBase;
+
+	UPROPERTY()
+	UMaterialInstanceDynamic* BlinkerDynamicMaterial;
+
+	UPROPERTY(EditAnywhere)
+	UCurveFloat* RadiusVsVelocity;
 
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* VRRoot;

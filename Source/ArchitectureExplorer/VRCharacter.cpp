@@ -21,8 +21,19 @@ AVRCharacter::AVRCharacter()
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(VRRoot);
 
+	LeftController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftController"));
+	LeftController->SetupAttachment(VRRoot);
+	LeftController->SetTrackingSource(EControllerHand::Left);
+
+	RightController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightController"));
+	RightController->SetupAttachment(VRRoot);
+	RightController->SetTrackingSource(EControllerHand::Right);
+
 	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
 	DestinationMarker->SetupAttachment(GetRootComponent());
+
+	PostProcessComponent = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostProcessComponent"));
+	PostProcessComponent->SetupAttachment(GetRootComponent());
 }
 
 // Called when the game starts or when spawned
@@ -30,6 +41,13 @@ void AVRCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	DestinationMarker->SetVisibility(false); // Make sure teleport cylinder doesn't show at start
+
+	if (BlinkerMaterialBase)
+	{
+		BlinkerDynamicMaterial = UMaterialInstanceDynamic::Create(BlinkerMaterialBase, NULL);
+		PostProcessComponent->AddOrUpdateBlendable(BlinkerDynamicMaterial);
+		BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 0.4f);
+	}
 }
 
 // Called every frame
@@ -38,6 +56,56 @@ void AVRCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	UpdateCharacterVRRootLocation();
 	UpdateDestinationMarker();
+
+	UpdateBlinker();
+}
+
+void AVRCharacter::UpdateBlinker()
+{
+	float PlayerSpeedMeters = GetVelocity().Size() / 100;
+	// UE_LOG(LogTemp, Display, TEXT("Player speed %f"), PlayerSpeedMeters);
+
+	float BlinkerRadius = RadiusVsVelocity->GetFloatValue(PlayerSpeedMeters);
+	BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), BlinkerRadius);
+
+	FVector2D Center = GetBlinkerCenter();
+	BlinkerDynamicMaterial->SetVectorParameterValue(TEXT("Center"), FLinearColor(Center.X, Center.Y, 0));
+}
+
+FVector2D AVRCharacter::GetBlinkerCenter()
+{
+	FVector MovementDirection = GetVelocity().GetSafeNormal();
+	if (MovementDirection.IsNearlyZero())
+	{
+		return FVector2D(0.5, 0.5);
+	}
+	FVector WorldStationaryLocation;
+	if (FVector::DotProduct(Camera->GetForwardVector(), MovementDirection) > 0)
+	{
+		WorldStationaryLocation = Camera->GetComponentLocation() + MovementDirection * 1000;
+	}
+	else
+	{
+		WorldStationaryLocation = Camera->GetComponentLocation() - MovementDirection * 1000;
+	}
+	int32 SizeX;
+	int32 SizeY;
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController)
+	{
+		return FVector2D(0.5, 0.5);
+	}
+	PlayerController->GetViewportSize(OUT SizeX, OUT SizeY); // Get screen dimensions in pixels
+	FVector2D ScreenLocation;
+	PlayerController->ProjectWorldLocationToScreen(WorldStationaryLocation, OUT ScreenLocation);
+	UE_LOG(LogTemp, Display, TEXT("Screen location: %s"), *ScreenLocation.ToString())
+	// Normalize to U,V instead of pixels
+	return FVector2D(ScreenLocation.X / SizeX, ScreenLocation.Y / SizeY);
+
+	// else
+	// {
+	// 	return FVector2D(0.5, 0.5);
+	// }
 }
 
 void AVRCharacter::UpdateDestinationMarker()
@@ -58,8 +126,23 @@ bool AVRCharacter::FindTeleportDestination(FVector& OutLocation)
 {
 	// GetActorLocation(),
 	// GetActorLocation() + Camera->GetComponentRotation().Vector() * MaxTeleportDistance, // Calculate player reach
-	FVector Start = Camera->GetComponentLocation();
-	FVector End = Start + Camera->GetForwardVector() * MaxTeleportDistance;
+	// UCapsuleComponent* MyCapsuleComponent = GetCapsuleComponent();
+	// if (MyCapsuleComponent)
+	// {
+	// 	UE_LOG(LogTemp, Display, TEXT("Capsule component name: %s"), *MyCapsuleComponent->GetName());
+	// 	UE_LOG(LogTemp, Display, TEXT("Owner name: %s"), *MyCapsuleComponent->GetOwner()->GetName());
+	// }
+	// else
+	// {
+	// 	UE_LOG(LogTemp, Display, TEXT("Capsule component NOT FOUND"))
+	// }
+	FVector ControllerForwardVector = LeftController->GetForwardVector();
+	UE_LOG(LogTemp, Display, TEXT("Controller forward vectors:%s"), *ControllerForwardVector.ToString());
+	ControllerForwardVector = ControllerForwardVector.RotateAngleAxis(30, LeftController->GetRightVector());
+
+	FVector Start = LeftController->GetComponentLocation();
+	FVector End = Start + ControllerForwardVector * MaxTeleportDistance;
+
 	FHitResult Hit;
 	bool bHit = GetWorld()->LineTraceSingleByChannel(
 	    OUT Hit,
@@ -102,7 +185,7 @@ void AVRCharacter::MoveRight(float throttle)
 void AVRCharacter::BeginTeleport()
 {
 	// only teleport if marker is at a valid location
-	if (DestinationMarker->bVisible)
+	if (DestinationMarker->IsVisible())
 	{
 		StartFade(0, 1);
 

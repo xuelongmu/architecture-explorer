@@ -6,30 +6,7 @@
 	{
 		"/actions/main":
 		{
-			"sources": [
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/left/input/trigger",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/VREditor_TriggerL axis"
-						}
-					}
-				},
-				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/right/input/trigger",
-					"inputs":
-					{
-						"value":
-						{
-							"output": "/actions/main/in/VREditor_TriggerR axis"
-						}
-					}
-				}
-			],
+			"sources": [],
 			"poses": [
 				{
 					"output": "/actions/main/in/controllerleft",
