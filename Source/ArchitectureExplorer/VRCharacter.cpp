@@ -29,6 +29,9 @@ AVRCharacter::AVRCharacter()
 	RightController->SetupAttachment(VRRoot);
 	RightController->SetTrackingSource(EControllerHand::Right);
 
+	TeleportPath = CreateDefaultSubobject<USplineComponent>(TEXT("TeleportPath"));
+	TeleportPath->SetupAttachment(LeftController);
+
 	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
 	DestinationMarker->SetupAttachment(GetRootComponent());
 
@@ -48,6 +51,12 @@ void AVRCharacter::BeginPlay()
 		PostProcessComponent->AddOrUpdateBlendable(BlinkerDynamicMaterial);
 		BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 0.4f);
 	}
+
+	// DynamicMesh = NewObject<UStaticMeshComponent>(this);
+	// DynamicMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+	// DynamicMesh->SetStaticMesh(TeleportArcMesh);
+	// DynamicMesh->SetMaterial(0, TeleportArcMaterial);
+	// DynamicMesh->RegisterComponent();
 }
 
 // Called every frame
@@ -111,32 +120,34 @@ FVector2D AVRCharacter::GetBlinkerCenter()
 void AVRCharacter::UpdateDestinationMarker()
 {
 	FVector Location;
-	if (FindTeleportDestination(OUT Location))
+	TArray<FVector> PathArray;
+	if (FindTeleportDestination(OUT Location, OUT PathArray))
 	{
 		DestinationMarker->SetVisibility(true);
 		DestinationMarker->SetWorldLocation(Location);
+		DrawTeleportPath(PathArray);
 	}
 	else
 	{
 		DestinationMarker->SetVisibility(false);
+		TeleportPath->ClearSplinePoints();
 	}
 }
 
-bool AVRCharacter::FindTeleportDestination(FVector& OutLocation)
+bool AVRCharacter::FindTeleportDestination(FVector& OutLocation, TArray<FVector>& OutPathArray)
 {
-	FVector ControllerForwardVector = LeftController->GetForwardVector();
-	// UE_LOG(LogTemp, Display, TEXT("Controller forward vectors:%s"), *ControllerForwardVector.ToString());
-	ControllerForwardVector = ControllerForwardVector.RotateAngleAxis(30, LeftController->GetRightVector());
-
 	FPredictProjectilePathParams ParabolicParams = {
 	    TeleportProjectileRadius,
 	    LeftController->GetComponentLocation(),
 	    LeftController->GetForwardVector() * TeleportProjectileSpeed,
 	    5.f,
-	    ECollisionChannel::ECC_Visibility};
+	    ECollisionChannel::ECC_Visibility,
+	    this //ignore our own character as a target
+	};
 	ParabolicParams.DrawDebugType = EDrawDebugTrace::ForOneFrame;
-	ParabolicParams.bTraceWithCollision = true;
+	ParabolicParams.bTraceComplex = true;
 	FPredictProjectilePathResult ParabolicResult;
+
 	bool bHit = UGameplayStatics::PredictProjectilePath(GetWorld(), ParabolicParams, OUT ParabolicResult);
 	if (!bHit)
 	{
@@ -145,13 +156,80 @@ bool AVRCharacter::FindTeleportDestination(FVector& OutLocation)
 
 	UE_LOG(LogTemp, Display, TEXT("HitResult actor: %s"), *ParabolicResult.HitResult.Actor->GetName())
 	FNavLocation OutNavLocation;
+
+	// Project the hit result onto nav mesh plane
 	bool bNav = UNavigationSystemV1::GetCurrent(GetWorld())->ProjectPointToNavigation(ParabolicResult.HitResult.Location, OUT OutNavLocation, TeleportProjectionExtent);
 	if (!bNav)
 	{
 		return false;
 	}
+	TArray<FVector> PathArray;
+
+	// Extract from data the path spline
+	for (auto& Point : ParabolicResult.PathData)
+	{
+		PathArray.Add(Point.Location);
+	}
+	OutPathArray = PathArray;
+
 	OutLocation = OutNavLocation.Location;
 	return true;
+}
+
+void AVRCharacter::DrawTeleportPath(const TArray<FVector>& PathArray)
+{
+	TeleportPath->ClearSplinePoints(false);
+	for (auto Point : PathArray)
+	{
+		UE_LOG(LogTemp, Display, TEXT("Spline location: %s"), *Point.ToString());
+		TeleportPath->AddSplinePoint(Point, ESplineCoordinateSpace::World, false);
+	}
+	TeleportPath->UpdateSpline();
+
+	// for (int i = 0; i < PathArray.Num(); i++)
+	// {
+	// 	if (TeleportPathMeshPool.Num() <= i)
+	// 	{
+	// 		UStaticMeshComponent* PoolMesh = NewObject<UStaticMeshComponent>(this);
+	// 		PoolMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+	// 		PoolMesh->SetStaticMesh(TeleportArcMesh);
+	// 		PoolMesh->SetMaterial(0, TeleportArcMaterial);
+	// 		PoolMesh->RegisterComponent();
+	// 		TeleportPathMeshPool.Add(PoolMesh);
+	// 	}
+	// 	TeleportPathMeshPool[i]->SetWorldLocation(PathArray[i]);
+	// }
+
+	// Hide all meshes
+	for (auto PoolMesh : TeleportPathMeshPool)
+	{
+		PoolMesh->SetVisibleFlag(false);
+	}
+
+	// Instantiate new meshes as needed
+	int32 PathSize = PathArray.Num();
+	int32 PoolSize = TeleportPathMeshPool.Num();
+	if (PoolSize < PathSize)
+	{
+		for (int i = 0; i < PathSize - PoolSize; i++)
+		{
+			UStaticMeshComponent* PoolMesh = NewObject<UStaticMeshComponent>(this);
+			PoolMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+			PoolMesh->SetStaticMesh(TeleportArcMesh);
+			PoolMesh->SetMaterial(0, TeleportArcMaterial);
+			PoolMesh->RegisterComponent();
+			TeleportPathMeshPool.Add(PoolMesh);
+		}
+	}
+
+	// TeleportPathMeshPool.SetNum(PathArray.Num(), false);
+
+	// Set mesh locations, only show used meshes
+	for (int i = 0; i < PathArray.Num(); i++)
+	{
+		TeleportPathMeshPool[i]->SetWorldLocation(PathArray[i]);
+		TeleportPathMeshPool[i]->SetVisibleFlag(true);
+	}
 }
 
 // Called to bind functionality to input

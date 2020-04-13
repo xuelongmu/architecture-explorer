@@ -4,6 +4,7 @@
 
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
+#include "Components/SplineComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -35,8 +36,10 @@ public:
 
 private:
 	void UpdateCharacterVRRootLocation();
-	bool FindTeleportDestination(FVector& OutLocation);
+	bool FindTeleportDestination(FVector& OutLocation, TArray<FVector>& PathArray);
+	void DrawTeleportPath(const TArray<FVector>& PathArray);
 	void UpdateDestinationMarker();
+
 	// void UpdateVRRootLocation(FVector TranslationToApply);
 	void StartFade(float FromAlpha, float ToAlpha);
 
@@ -62,7 +65,25 @@ private:
 	UPROPERTY(EditAnywhere)
 	UMaterialInterface* BlinkerMaterialBase;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
+	USplineComponent* TeleportPath;
+
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* DestinationMarker;
+
+	// UPROPERTY(VisibleAnywhere)
+	// UStaticMeshComponent* DynamicMesh;
+
+	UPROPERTY(VisibleAnywhere)
+	TArray<UStaticMeshComponent*> TeleportPathMeshPool;
+
+	UPROPERTY(EditDefaultsOnly)
+	UStaticMesh* TeleportArcMesh;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMaterialInterface* TeleportArcMaterial;
+
+	UPROPERTY(VisibleAnywhere)
 	UMaterialInstanceDynamic* BlinkerDynamicMaterial;
 
 	UPROPERTY(EditAnywhere)
@@ -70,9 +91,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	USceneComponent* VRRoot;
-
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* DestinationMarker;
 
 	UPROPERTY(EditAnywhere)
 	float TeleportProjectileRadius = 5.f;
