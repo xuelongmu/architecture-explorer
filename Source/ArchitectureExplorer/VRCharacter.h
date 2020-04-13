@@ -5,12 +5,14 @@
 #include "Camera/CameraComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "MotionControllerComponent.h"
+#include "HandController.h"
 
 #include "VRCharacter.generated.h"
 
@@ -38,6 +40,7 @@ private:
 	void UpdateCharacterVRRootLocation();
 	bool FindTeleportDestination(FVector& OutLocation, TArray<FVector>& PathArray);
 	void DrawTeleportPath(const TArray<FVector>& PathArray);
+	void HideTeleportPath();
 	void UpdateDestinationMarker();
 
 	// void UpdateVRRootLocation(FVector TranslationToApply);
@@ -71,11 +74,8 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* DestinationMarker;
 
-	// UPROPERTY(VisibleAnywhere)
-	// UStaticMeshComponent* DynamicMesh;
-
 	UPROPERTY(VisibleAnywhere)
-	TArray<UStaticMeshComponent*> TeleportPathMeshPool;
+	TArray<USplineMeshComponent*> TeleportPathMeshPool;
 
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMesh* TeleportArcMesh;

@@ -52,6 +52,20 @@ void AVRCharacter::BeginPlay()
 		BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 0.4f);
 	}
 
+	// GetWorld()->SpawnActor<AHandController>();
+	// if (LeftController)
+	// {
+	// 	LeftController->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+	// 	LeftController->SetOwner(this);
+	// }
+
+	// GetWorld()->SpawnActor<AHandController>();
+	// if (RightController)
+	// {
+	// 	RightController->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+	// 	RightController->SetOwner(this);
+	// }
+
 	// DynamicMesh = NewObject<UStaticMeshComponent>(this);
 	// DynamicMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
 	// DynamicMesh->SetStaticMesh(TeleportArcMesh);
@@ -130,7 +144,7 @@ void AVRCharacter::UpdateDestinationMarker()
 	else
 	{
 		DestinationMarker->SetVisibility(false);
-		TeleportPath->ClearSplinePoints();
+		HideTeleportPath();
 	}
 }
 
@@ -144,7 +158,7 @@ bool AVRCharacter::FindTeleportDestination(FVector& OutLocation, TArray<FVector>
 	    ECollisionChannel::ECC_Visibility,
 	    this //ignore our own character as a target
 	};
-	ParabolicParams.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+	// ParabolicParams.DrawDebugType = EDrawDebugTrace::ForOneFrame;
 	ParabolicParams.bTraceComplex = true;
 	FPredictProjectilePathResult ParabolicResult;
 
@@ -154,7 +168,7 @@ bool AVRCharacter::FindTeleportDestination(FVector& OutLocation, TArray<FVector>
 		return false;
 	}
 
-	UE_LOG(LogTemp, Display, TEXT("HitResult actor: %s"), *ParabolicResult.HitResult.Actor->GetName())
+	// UE_LOG(LogTemp, Display, TEXT("HitResult actor: %s"), *ParabolicResult.HitResult.Actor->GetName())
 	FNavLocation OutNavLocation;
 
 	// Project the hit result onto nav mesh plane
@@ -176,59 +190,92 @@ bool AVRCharacter::FindTeleportDestination(FVector& OutLocation, TArray<FVector>
 	return true;
 }
 
+void AVRCharacter::HideTeleportPath()
+{
+	// Hide all meshes
+	for (auto SplineMesh : TeleportPathMeshPool)
+	{
+		SplineMesh->SetVisibility(false);
+	}
+}
+
 void AVRCharacter::DrawTeleportPath(const TArray<FVector>& PathArray)
 {
 	TeleportPath->ClearSplinePoints(false);
+
+	// Construct spline
 	for (auto Point : PathArray)
 	{
-		UE_LOG(LogTemp, Display, TEXT("Spline location: %s"), *Point.ToString());
+		// UE_LOG(LogTemp, Display, TEXT("Spline location: %s"), *Point.ToString());
 		TeleportPath->AddSplinePoint(Point, ESplineCoordinateSpace::World, false);
 	}
+
 	TeleportPath->UpdateSpline();
 
-	// for (int i = 0; i < PathArray.Num(); i++)
-	// {
-	// 	if (TeleportPathMeshPool.Num() <= i)
-	// 	{
-	// 		UStaticMeshComponent* PoolMesh = NewObject<UStaticMeshComponent>(this);
-	// 		PoolMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
-	// 		PoolMesh->SetStaticMesh(TeleportArcMesh);
-	// 		PoolMesh->SetMaterial(0, TeleportArcMaterial);
-	// 		PoolMesh->RegisterComponent();
-	// 		TeleportPathMeshPool.Add(PoolMesh);
-	// 	}
-	// 	TeleportPathMeshPool[i]->SetWorldLocation(PathArray[i]);
-	// }
-
-	// Hide all meshes
-	for (auto PoolMesh : TeleportPathMeshPool)
+	/* 
+	// Udemy method
+	for (int i = 0; i < PathArray.Num() - 1; i++)
 	{
-		PoolMesh->SetVisibleFlag(false);
-	}
+		if (TeleportPathMeshPool.Num() - 1 <= i)
+		{
+			USplineMeshComponent* SplineMesh = NewObject<USplineMeshComponent>(this);
+			SplineMesh->SetMobility(EComponentMobility::Movable);
+			SplineMesh->AttachToComponent(TeleportPath, FAttachmentTransformRules::KeepRelativeTransform);
+			SplineMesh->SetStaticMesh(TeleportArcMesh);
+			SplineMesh->SetMaterial(0, TeleportArcMaterial);
+			SplineMesh->RegisterComponent();
+			SplineMesh->SetVisibility(false);
+			TeleportPathMeshPool.Add(SplineMesh);
+		}
+		USplineMeshComponent* SplineMesh = TeleportPathMeshPool[i];
+
+		FVector StartLocation, StartTangent, EndLocation, EndTangent;
+
+		TeleportPath->GetLocalLocationAndTangentAtSplinePoint(i, OUT StartLocation, OUT StartTangent);
+		TeleportPath->GetLocalLocationAndTangentAtSplinePoint(i + 1, OUT EndLocation, OUT EndTangent);
+		SplineMesh->SetStartAndEnd(StartLocation, StartTangent, EndLocation, EndTangent);
+		SplineMesh->SetVisibility(true);
+	} */
+
+	HideTeleportPath();
 
 	// Instantiate new meshes as needed
-	int32 PathSize = PathArray.Num();
-	int32 PoolSize = TeleportPathMeshPool.Num();
-	if (PoolSize < PathSize)
+	int32 SegmentSize = PathArray.Num() - 1;
+	int32 CurrentPoolSize = TeleportPathMeshPool.Num();
+	if (CurrentPoolSize < SegmentSize)
 	{
-		for (int i = 0; i < PathSize - PoolSize; i++)
+		for (int i = 0; i < SegmentSize - CurrentPoolSize; i++)
 		{
-			UStaticMeshComponent* PoolMesh = NewObject<UStaticMeshComponent>(this);
-			PoolMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
-			PoolMesh->SetStaticMesh(TeleportArcMesh);
-			PoolMesh->SetMaterial(0, TeleportArcMaterial);
-			PoolMesh->RegisterComponent();
-			TeleportPathMeshPool.Add(PoolMesh);
+			USplineMeshComponent* SplineMesh = NewObject<USplineMeshComponent>(this);
+			SplineMesh->SetMobility(EComponentMobility::Movable);
+			SplineMesh->AttachToComponent(TeleportPath, FAttachmentTransformRules::KeepRelativeTransform);
+
+			SplineMesh->SetStaticMesh(TeleportArcMesh);
+			SplineMesh->SetMaterial(0, TeleportArcMaterial);
+			SplineMesh->RegisterComponent();
+			SplineMesh->SetVisibility(false);
+			TeleportPathMeshPool.Add(SplineMesh);
 		}
 	}
 
-	// TeleportPathMeshPool.SetNum(PathArray.Num(), false);
-
-	// Set mesh locations, only show used meshes
-	for (int i = 0; i < PathArray.Num(); i++)
+	// Set mesh locations and tangents. Only show used meshes
+	for (int i = 0; i < PathArray.Num() - 1; i++)
 	{
-		TeleportPathMeshPool[i]->SetWorldLocation(PathArray[i]);
-		TeleportPathMeshPool[i]->SetVisibleFlag(true);
+		USplineMeshComponent* SplineMesh = TeleportPathMeshPool[i];
+
+		FVector StartLocation, StartTangent, EndLocation, EndTangent;
+		TeleportPath->GetLocalLocationAndTangentAtSplinePoint(i, OUT StartLocation, OUT StartTangent);
+		TeleportPath->GetLocalLocationAndTangentAtSplinePoint(i + 1, OUT EndLocation, OUT EndTangent);
+
+		// UE_LOG(LogTemp, Display, TEXT("SplineMesh location at index %d: %s"), i, *SplineMesh->GetComponentLocation().ToString());
+		// UE_LOG(LogTemp, Display, TEXT("Start location: %s"), *StartLocation.ToString());
+		// UE_LOG(LogTemp, Display, TEXT("Start tangent: %s"), *StartTangent.ToString());
+		// UE_LOG(LogTemp, Display, TEXT("End location: %s"), *EndLocation.ToString());
+		// UE_LOG(LogTemp, Display, TEXT("End tangent: %s"), *EndTangent.ToString());
+
+		SplineMesh->SetStartAndEnd(StartLocation, StartTangent, EndLocation, EndTangent);
+
+		SplineMesh->SetVisibility(true);
 	}
 }
 
