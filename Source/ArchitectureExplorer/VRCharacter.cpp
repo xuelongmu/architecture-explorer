@@ -18,8 +18,6 @@ AVRCharacter::AVRCharacter()
 	VRRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VRRoot"));
 	VRRoot->SetupAttachment(GetRootComponent());
 
-	UE_LOG(LogTemp, Warning, TEXT("VRCharacter root component:%s"), *GetRootComponent()->GetName());
-
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(VRRoot);
 

@@ -90,33 +90,19 @@ void AHandController::PlayHandHoldRumble()
 
 	EControllerHand Hand = MotionController->GetTrackingSource();
 
-	// auto PlayerController = GetCharacterPlayerController();
-	// UE_LOG(LogTemp, Warning, TEXT("Initialized PC pointer"));
-
-	// if (PlayerController)
-	// {
-	// 	FString HandString = UEnum::GetValueAsString(Hand);
-
-	// 	UE_LOG(LogTemp, Warning, TEXT("Player controller name: %s"), *PlayerController->GetName());
-
-	// 	PlayerController->PlayHapticEffect(HandHoldRumble, Hand); // If not working, try restarting SteamVR or replacing batteries.
-	// }
-
 	APlayerController* PlayerController = nullptr;
 
-	if (GetCharacterPlayerController(OUT & PlayerController))
+	if (GetCharacterPlayerController(OUT PlayerController))
 	{
 		FString HandString = UEnum::GetValueAsString(Hand);
 
 		UE_LOG(LogTemp, Warning, TEXT("Player controller name: %s"), *PlayerController->GetName());
 
 		PlayerController->PlayHapticEffect(HandHoldRumble, Hand); // If not working, try restarting SteamVR or replacing batteries.
-		UE_LOG(LogTemp, Warning, TEXT("A4"));
 	}
-	UE_LOG(LogTemp, Warning, TEXT("A5"));
 }
 
-bool AHandController::GetCharacterPlayerController(APlayerController** OutPlayerController)
+bool AHandController::GetCharacterPlayerController(APlayerController*& OutPlayerController)
 {
 	auto Pawn = Cast<APawn>(GetAttachParentActor());
 
@@ -132,32 +118,12 @@ bool AHandController::GetCharacterPlayerController(APlayerController** OutPlayer
 		return false;
 	}
 
-	*OutPlayerController = PlayerController;
+	OutPlayerController = PlayerController;
 	UE_LOG(LogTemp, Warning, TEXT("Player controller name: %s"), *PlayerController->GetName());
 	// UE_LOG(LogTemp, Warning, TEXT("Out Player controller name: %s"), *OutPlayerController->GetName());
 
 	return true;
 }
-
-// APlayerController* AHandController::GetCharacterPlayerController() const
-// {
-// 	auto Pawn = Cast<APawn>(GetAttachParentActor());
-
-// 	if (!Pawn)
-// 	{
-// 		return nullptr;
-// 	}
-
-// 	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-
-// 	if (!PC)
-// 	{
-// 		return nullptr;
-// 	}
-// 	UE_LOG(LogTemp, Warning, TEXT("B5"));
-
-// 	return PC;
-// }
 
 void AHandController::Grip()
 {

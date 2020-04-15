@@ -42,8 +42,7 @@ private:
 
 	void PlayHandHoldRumble();
 
-	bool GetCharacterPlayerController(APlayerController** OutPlayerController);
-	// APlayerController* GetCharacterPlayerController() const;
+	bool GetCharacterPlayerController(APlayerController*& OutPlayerController);
 
 	void UpdateClimb();
 
