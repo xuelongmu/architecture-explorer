@@ -82,6 +82,14 @@
 			"type": "boolean"
 		},
 		{
+			"name": "/actions/main/in/GripLeft",
+			"type": "boolean"
+		},
+		{
+			"name": "/actions/main/in/GripRight",
+			"type": "boolean"
+		},
+		{
 			"name": "/actions/main/in/Forward axis",
 			"type": "vector1"
 		},
@@ -205,6 +213,8 @@
 			"/actions/main/out/vibrateright": "Haptic (Right)",
 			"/actions/main/in/open_console": "Open Console",
 			"/actions/main/in/Teleport": "Teleport",
+			"/actions/main/in/GripLeft": "GripLeft",
+			"/actions/main/in/GripRight": "GripRight",
 			"/actions/main/in/Forward axis": "Forward",
 			"/actions/main/in/Right axis": "Right",
 			"/actions/main": "Main Game Actions"

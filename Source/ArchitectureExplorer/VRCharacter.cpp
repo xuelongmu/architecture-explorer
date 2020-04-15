@@ -18,19 +18,13 @@ AVRCharacter::AVRCharacter()
 	VRRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VRRoot"));
 	VRRoot->SetupAttachment(GetRootComponent());
 
+	UE_LOG(LogTemp, Warning, TEXT("VRCharacter root component:%s"), *GetRootComponent()->GetName());
+
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(VRRoot);
 
-	LeftController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("LeftController"));
-	LeftController->SetupAttachment(VRRoot);
-	LeftController->SetTrackingSource(EControllerHand::Left);
-
-	RightController = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightController"));
-	RightController->SetupAttachment(VRRoot);
-	RightController->SetTrackingSource(EControllerHand::Right);
-
 	TeleportPath = CreateDefaultSubobject<USplineComponent>(TEXT("TeleportPath"));
-	TeleportPath->SetupAttachment(LeftController);
+	TeleportPath->SetupAttachment(VRRoot);
 
 	DestinationMarker = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DestinationMarker"));
 	DestinationMarker->SetupAttachment(GetRootComponent());
@@ -43,6 +37,7 @@ AVRCharacter::AVRCharacter()
 void AVRCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
 	DestinationMarker->SetVisibility(false); // Make sure teleport cylinder doesn't show at start
 
 	if (BlinkerMaterialBase)
@@ -52,25 +47,26 @@ void AVRCharacter::BeginPlay()
 		BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 0.4f);
 	}
 
-	// GetWorld()->SpawnActor<AHandController>();
-	// if (LeftController)
-	// {
-	// 	LeftController->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
-	// 	LeftController->SetOwner(this);
-	// }
+	if (HandControllerBP)
+	{
+		LeftController = GetWorld()->SpawnActor<AHandController>(HandControllerBP);
+		if (LeftController)
+		{
+			LeftController->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+			LeftController->SetHand(EControllerHand::Left);
+			LeftController->SetOwner(this);
+		}
 
-	// GetWorld()->SpawnActor<AHandController>();
-	// if (RightController)
-	// {
-	// 	RightController->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
-	// 	RightController->SetOwner(this);
-	// }
-
-	// DynamicMesh = NewObject<UStaticMeshComponent>(this);
-	// DynamicMesh->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
-	// DynamicMesh->SetStaticMesh(TeleportArcMesh);
-	// DynamicMesh->SetMaterial(0, TeleportArcMaterial);
-	// DynamicMesh->RegisterComponent();
+		RightController = GetWorld()->SpawnActor<AHandController>(HandControllerBP);
+		if (RightController)
+		{
+			RightController->AttachToComponent(VRRoot, FAttachmentTransformRules::KeepRelativeTransform);
+			RightController->SetHand(EControllerHand::Right);
+			RightController->SetOwner(this);
+		}
+		// Right controller pairing handled within this method.
+		LeftController->PairController(RightController);
+	}
 }
 
 // Called every frame
@@ -121,14 +117,56 @@ FVector2D AVRCharacter::GetBlinkerCenter()
 	PlayerController->GetViewportSize(OUT SizeX, OUT SizeY); // Get screen dimensions in pixels
 	FVector2D ScreenLocation;
 	PlayerController->ProjectWorldLocationToScreen(WorldStationaryLocation, OUT ScreenLocation);
-	UE_LOG(LogTemp, Display, TEXT("Screen location: %s"), *ScreenLocation.ToString())
+	// UE_LOG(LogTemp, Display, TEXT("Screen location: %s"), *ScreenLocation.ToString())
 	// Normalize to U,V instead of pixels
 	return FVector2D(ScreenLocation.X / SizeX, ScreenLocation.Y / SizeY);
+}
 
-	// else
-	// {
-	// 	return FVector2D(0.5, 0.5);
-	// }
+// Called to bind functionality to input
+void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	PlayerInputComponent->BindAxis(TEXT("Forward"), this, &AVRCharacter::MoveForward);
+	PlayerInputComponent->BindAxis(TEXT("Right"), this, &AVRCharacter::MoveRight);
+	PlayerInputComponent->BindAction(TEXT("Teleport"), IE_Released, this, &AVRCharacter::BeginTeleport);
+
+	PlayerInputComponent->BindAction(TEXT("GripLeft"), IE_Pressed, this, &AVRCharacter::GripLeft);
+	PlayerInputComponent->BindAction(TEXT("GripLeft"), IE_Released, this, &AVRCharacter::ReleaseLeft);
+	PlayerInputComponent->BindAction(TEXT("GripRight"), IE_Pressed, this, &AVRCharacter::GripRight);
+	PlayerInputComponent->BindAction(TEXT("GripRight"), IE_Released, this, &AVRCharacter::ReleaseRight);
+}
+
+void AVRCharacter::MoveForward(float throttle)
+{
+	AddMovementInput(throttle * Camera->GetForwardVector());
+}
+
+void AVRCharacter::MoveRight(float throttle)
+{
+	AddMovementInput(throttle * Camera->GetRightVector());
+}
+
+void AVRCharacter::BeginTeleport()
+{
+	UE_LOG(LogTemp, Display, TEXT("Teleport requested to %s"), *DestinationMarker->GetComponentLocation().ToString());
+	// only teleport if marker is at a valid location
+	if (DestinationMarker->IsVisible())
+	{
+		StartFade(0, 1);
+
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, this, &AVRCharacter::FinishTeleport, FadeInDuration);
+	}
+}
+
+void AVRCharacter::FinishTeleport()
+{
+	FVector DestinationLocation = DestinationMarker->GetComponentLocation();
+	DestinationLocation.Z += GetCapsuleComponent()->GetScaledCapsuleHalfHeight(); // Avoid teleporting player into ground
+	SetActorLocation(DestinationLocation);
+	UE_LOG(LogTemp, Display, TEXT("Teleport performed to %s"), *DestinationLocation.ToString());
+
+	StartFade(1, 0);
 }
 
 void AVRCharacter::UpdateDestinationMarker()
@@ -152,8 +190,8 @@ bool AVRCharacter::FindTeleportDestination(FVector& OutLocation, TArray<FVector>
 {
 	FPredictProjectilePathParams ParabolicParams = {
 	    TeleportProjectileRadius,
-	    LeftController->GetComponentLocation(),
-	    LeftController->GetForwardVector() * TeleportProjectileSpeed,
+	    LeftController->GetActorLocation(),
+	    LeftController->GetActorForwardVector() * TeleportProjectileSpeed,
 	    5.f,
 	    ECollisionChannel::ECC_Visibility,
 	    this //ignore our own character as a target
@@ -267,56 +305,10 @@ void AVRCharacter::DrawTeleportPath(const TArray<FVector>& PathArray)
 		TeleportPath->GetLocalLocationAndTangentAtSplinePoint(i, OUT StartLocation, OUT StartTangent);
 		TeleportPath->GetLocalLocationAndTangentAtSplinePoint(i + 1, OUT EndLocation, OUT EndTangent);
 
-		// UE_LOG(LogTemp, Display, TEXT("SplineMesh location at index %d: %s"), i, *SplineMesh->GetComponentLocation().ToString());
-		// UE_LOG(LogTemp, Display, TEXT("Start location: %s"), *StartLocation.ToString());
-		// UE_LOG(LogTemp, Display, TEXT("Start tangent: %s"), *StartTangent.ToString());
-		// UE_LOG(LogTemp, Display, TEXT("End location: %s"), *EndLocation.ToString());
-		// UE_LOG(LogTemp, Display, TEXT("End tangent: %s"), *EndTangent.ToString());
-
 		SplineMesh->SetStartAndEnd(StartLocation, StartTangent, EndLocation, EndTangent);
 
 		SplineMesh->SetVisibility(true);
 	}
-}
-
-// Called to bind functionality to input
-void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	PlayerInputComponent->BindAxis(TEXT("Forward"), this, &AVRCharacter::MoveForward);
-	PlayerInputComponent->BindAxis(TEXT("Right"), this, &AVRCharacter::MoveRight);
-	PlayerInputComponent->BindAction(TEXT("Teleport"), IE_Released, this, &AVRCharacter::BeginTeleport);
-}
-
-void AVRCharacter::MoveForward(float throttle)
-{
-	AddMovementInput(throttle * Camera->GetForwardVector());
-}
-
-void AVRCharacter::MoveRight(float throttle)
-{
-	AddMovementInput(throttle * Camera->GetRightVector());
-}
-
-void AVRCharacter::BeginTeleport()
-{
-	// only teleport if marker is at a valid location
-	if (DestinationMarker->IsVisible())
-	{
-		StartFade(0, 1);
-
-		FTimerHandle Handle;
-		GetWorldTimerManager().SetTimer(Handle, this, &AVRCharacter::FinishTeleport, FadeInDuration);
-	}
-}
-
-void AVRCharacter::FinishTeleport()
-{
-	FVector DestinationLocation = DestinationMarker->GetComponentLocation();
-	DestinationLocation.Z += GetCapsuleComponent()->GetScaledCapsuleHalfHeight(); // Avoid teleporting player into ground
-	SetActorLocation(DestinationLocation);
-
-	StartFade(1, 0);
 }
 
 void AVRCharacter::UpdateCharacterVRRootLocation()

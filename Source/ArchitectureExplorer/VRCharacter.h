@@ -10,9 +10,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "MotionControllerComponent.h"
 #include "HandController.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 #include "VRCharacter.generated.h"
 
@@ -36,37 +35,36 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-private:
+private: //methods
 	void UpdateCharacterVRRootLocation();
+	void StartFade(float FromAlpha, float ToAlpha);
+	void MoveForward(float throttle);
+	void MoveRight(float throttle);
+	void GripLeft() { LeftController->Grip(); }
+	void ReleaseLeft() { LeftController->Release(); }
+	void GripRight() { RightController->Grip(); }
+	void ReleaseRight() { RightController->Release(); }
+	void BeginTeleport();
+	void FinishTeleport();
 	bool FindTeleportDestination(FVector& OutLocation, TArray<FVector>& PathArray);
 	void DrawTeleportPath(const TArray<FVector>& PathArray);
 	void HideTeleportPath();
 	void UpdateDestinationMarker();
-
-	// void UpdateVRRootLocation(FVector TranslationToApply);
-	void StartFade(float FromAlpha, float ToAlpha);
-
-	void MoveForward(float throttle);
-	void MoveRight(float throttle);
-	void BeginTeleport();
-	void FinishTeleport();
 	void UpdateBlinker();
 	FVector2D GetBlinkerCenter();
 
+private: //state objects
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* Camera;
 
 	UPROPERTY(VisibleAnywhere)
-	UMotionControllerComponent* LeftController;
+	AHandController* LeftController;
 
 	UPROPERTY(VisibleAnywhere)
-	UMotionControllerComponent* RightController;
+	AHandController* RightController;
 
 	UPROPERTY(VisibleAnywhere)
-	UPostProcessComponent* PostProcessComponent;
-
-	UPROPERTY(EditAnywhere)
-	UMaterialInterface* BlinkerMaterialBase;
+	USceneComponent* VRRoot;
 
 	UPROPERTY(VisibleAnywhere)
 	USplineComponent* TeleportPath;
@@ -77,20 +75,24 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TArray<USplineMeshComponent*> TeleportPathMeshPool;
 
+	UPROPERTY(VisibleAnywhere)
+	UPostProcessComponent* PostProcessComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	UMaterialInstanceDynamic* BlinkerDynamicMaterial;
+
+private: // configuration parameters
+	UPROPERTY(EditAnywhere)
+	UMaterialInterface* BlinkerMaterialBase;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AHandController> HandControllerBP;
+
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMesh* TeleportArcMesh;
 
 	UPROPERTY(EditDefaultsOnly)
 	UMaterialInterface* TeleportArcMaterial;
-
-	UPROPERTY(VisibleAnywhere)
-	UMaterialInstanceDynamic* BlinkerDynamicMaterial;
-
-	UPROPERTY(EditAnywhere)
-	UCurveFloat* RadiusVsVelocity;
-
-	UPROPERTY(VisibleAnywhere)
-	USceneComponent* VRRoot;
 
 	UPROPERTY(EditAnywhere)
 	float TeleportProjectileRadius = 5.f;
@@ -103,6 +105,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	FVector TeleportProjectionExtent = FVector(100.f, 100.f, 100.f);
+
+	UPROPERTY(EditAnywhere)
+	UCurveFloat* RadiusVsVelocity;
 
 	UPROPERTY(EditAnywhere)
 	float FadeInDuration = 0.5f;
