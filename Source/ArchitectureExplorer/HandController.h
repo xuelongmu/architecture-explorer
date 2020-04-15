@@ -40,10 +40,10 @@ private:
 	// helpers
 	bool CanClimb() const;
 
-	void PlayHandHoldRumble() const;
+	void PlayHandHoldRumble();
 
-	// bool GetPlayerController(APlayerController* OutPlayerController) const;
-	APlayerController* GetCharacterPlayerController() const;
+	bool GetCharacterPlayerController(APlayerController** OutPlayerController);
+	// APlayerController* GetCharacterPlayerController() const;
 
 	void UpdateClimb();
 

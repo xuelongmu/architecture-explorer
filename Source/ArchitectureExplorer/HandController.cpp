@@ -81,24 +81,30 @@ bool AHandController::CanClimb() const
 	return false;
 }
 
-void AHandController::PlayHandHoldRumble() const
+void AHandController::PlayHandHoldRumble()
 {
-	UE_LOG(LogTemp, Warning, TEXT("A0"));
-
 	if (bIsClimbing) // Avoid constant rumbling weirdness when player is climbing
 	{
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("A1"));
 
 	EControllerHand Hand = MotionController->GetTrackingSource();
 
-	// APlayerController* PlayerController = nullptr;
+	// auto PlayerController = GetCharacterPlayerController();
+	// UE_LOG(LogTemp, Warning, TEXT("Initialized PC pointer"));
 
-	auto PlayerController = GetCharacterPlayerController();
-	UE_LOG(LogTemp, Warning, TEXT("Initialized PC pointer"));
+	// if (PlayerController)
+	// {
+	// 	FString HandString = UEnum::GetValueAsString(Hand);
 
-	if (PlayerController)
+	// 	UE_LOG(LogTemp, Warning, TEXT("Player controller name: %s"), *PlayerController->GetName());
+
+	// 	PlayerController->PlayHapticEffect(HandHoldRumble, Hand); // If not working, try restarting SteamVR or replacing batteries.
+	// }
+
+	APlayerController* PlayerController = nullptr;
+
+	if (GetCharacterPlayerController(OUT & PlayerController))
 	{
 		FString HandString = UEnum::GetValueAsString(Hand);
 
@@ -108,70 +114,50 @@ void AHandController::PlayHandHoldRumble() const
 		UE_LOG(LogTemp, Warning, TEXT("A4"));
 	}
 	UE_LOG(LogTemp, Warning, TEXT("A5"));
-
-	// auto Pawn = Cast<APawn>(GetAttachParentActor());
-	// if (Pawn)
-	// {
-	// 	auto PC = Cast<APlayerController>(Pawn->GetController());
-	// 	if (PC)
-	// 	{
-	// 		UE_LOG(LogTemp, Warning, TEXT("Activating haptic feedback on %s"), *PC->GetName(), *UEnum::GetValueAsString(Hand));
-	// 		// PC->ClientPlayForceFeedback(HandHoldForceFeedback);
-	// 		PC->PlayHapticEffect(HandHoldRumble, Hand);
-	// 	}
-	// }
 }
 
-// bool AHandController::GetPlayerController(APlayerController* OutPlayerController) const
-// {
-// 	UE_LOG(LogTemp, Warning, TEXT("B0"));
-
-// 	auto Pawn = Cast<APawn>(GetAttachParentActor());
-// 	UE_LOG(LogTemp, Warning, TEXT("B1"));
-
-// 	if (!Pawn)
-// 	{
-// 		return false;
-// 	}
-// 	UE_LOG(LogTemp, Warning, TEXT("B2"));
-
-// 	APlayerController* PlayerController = Cast<APlayerController>(Pawn->GetController());
-// 	UE_LOG(LogTemp, Warning, TEXT("B3"));
-
-// 	if (!PlayerController)
-// 	{
-// 		return false;
-// 	}
-// 	UE_LOG(LogTemp, Warning, TEXT("B4"));
-
-// 	OutPlayerController = PlayerController;
-// 	UE_LOG(LogTemp, Warning, TEXT("Player controller name: %s"), *PlayerController->GetName());
-// 	UE_LOG(LogTemp, Warning, TEXT("Out Player controller name: %s"), *OutPlayerController->GetName());
-
-// 	UE_LOG(LogTemp, Warning, TEXT("B5"));
-
-// 	return true;
-// }
-
-APlayerController* AHandController::GetCharacterPlayerController() const
+bool AHandController::GetCharacterPlayerController(APlayerController** OutPlayerController)
 {
 	auto Pawn = Cast<APawn>(GetAttachParentActor());
 
 	if (!Pawn)
 	{
-		return nullptr;
+		return false;
 	}
 
-	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+	APlayerController* PlayerController = Cast<APlayerController>(Pawn->GetController());
 
-	if (!PC)
+	if (!PlayerController)
 	{
-		return nullptr;
+		return false;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("B5"));
 
-	return PC;
+	*OutPlayerController = PlayerController;
+	UE_LOG(LogTemp, Warning, TEXT("Player controller name: %s"), *PlayerController->GetName());
+	// UE_LOG(LogTemp, Warning, TEXT("Out Player controller name: %s"), *OutPlayerController->GetName());
+
+	return true;
 }
+
+// APlayerController* AHandController::GetCharacterPlayerController() const
+// {
+// 	auto Pawn = Cast<APawn>(GetAttachParentActor());
+
+// 	if (!Pawn)
+// 	{
+// 		return nullptr;
+// 	}
+
+// 	APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+
+// 	if (!PC)
+// 	{
+// 		return nullptr;
+// 	}
+// 	UE_LOG(LogTemp, Warning, TEXT("B5"));
+
+// 	return PC;
+// }
 
 void AHandController::Grip()
 {
