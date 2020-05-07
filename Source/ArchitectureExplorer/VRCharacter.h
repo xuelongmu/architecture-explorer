@@ -38,8 +38,8 @@ public:
 private: //methods
 	void UpdateCharacterVRRootLocation();
 	void StartFade(float FromAlpha, float ToAlpha);
-	void MoveForward(float throttle);
-	void MoveRight(float throttle);
+	void MoveForward(float Throttle);
+	void MoveRight(float Throttle);
 	void GripLeft() { LeftController->Grip(); }
 	void ReleaseLeft() { LeftController->Release(); }
 	void GripRight() { RightController->Grip(); }

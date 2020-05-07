@@ -42,7 +42,8 @@ void AVRCharacter::BeginPlay()
 	{
 		BlinkerDynamicMaterial = UMaterialInstanceDynamic::Create(BlinkerMaterialBase, NULL);
 		PostProcessComponent->AddOrUpdateBlendable(BlinkerDynamicMaterial);
-		BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 0.4f);
+		// BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 0.4f);
+		BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), 2.0f); //disabled blinker
 	}
 
 	if (HandControllerBP)
@@ -82,11 +83,12 @@ void AVRCharacter::UpdateBlinker()
 	float PlayerSpeedMeters = GetVelocity().Size() / 100;
 	// UE_LOG(LogTemp, Display, TEXT("Player speed %f"), PlayerSpeedMeters);
 
-	float BlinkerRadius = RadiusVsVelocity->GetFloatValue(PlayerSpeedMeters);
-	BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), BlinkerRadius);
+	//disabled blinker
+	// float BlinkerRadius = RadiusVsVelocity->GetFloatValue(PlayerSpeedMeters);
+	// BlinkerDynamicMaterial->SetScalarParameterValue(TEXT("Radius"), BlinkerRadius);
 
-	FVector2D Center = GetBlinkerCenter();
-	BlinkerDynamicMaterial->SetVectorParameterValue(TEXT("Center"), FLinearColor(Center.X, Center.Y, 0));
+	// FVector2D Center = GetBlinkerCenter();
+	// BlinkerDynamicMaterial->SetVectorParameterValue(TEXT("Center"), FLinearColor(Center.X, Center.Y, 0));
 }
 
 FVector2D AVRCharacter::GetBlinkerCenter()
@@ -120,12 +122,14 @@ FVector2D AVRCharacter::GetBlinkerCenter()
 	return FVector2D(ScreenLocation.X / SizeX, ScreenLocation.Y / SizeY);
 }
 
-// Called to bind functionality to input
+// Called to bind functionality to &AVR
 void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	PlayerInputComponent->BindAxis(TEXT("Forward"), this, &AVRCharacter::MoveForward);
-	PlayerInputComponent->BindAxis(TEXT("Right"), this, &AVRCharacter::MoveRight);
+
+	PlayerInputComponent->BindAxis(TEXT("Move_Y"), this, &AVRCharacter::MoveForward);
+	PlayerInputComponent->BindAxis(TEXT("Move_X"), this, &AVRCharacter::MoveRight);
+
 	PlayerInputComponent->BindAction(TEXT("Teleport"), IE_Released, this, &AVRCharacter::BeginTeleport);
 
 	PlayerInputComponent->BindAction(TEXT("GripLeft"), IE_Pressed, this, &AVRCharacter::GripLeft);
@@ -134,14 +138,20 @@ void AVRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAction(TEXT("GripRight"), IE_Released, this, &AVRCharacter::ReleaseRight);
 }
 
-void AVRCharacter::MoveForward(float throttle)
+void AVRCharacter::MoveForward(float Throttle)
 {
-	AddMovementInput(throttle * Camera->GetForwardVector());
+	if (FMath::Abs(Throttle) > 0.1)
+	{
+		AddMovementInput(Throttle * Camera->GetForwardVector());
+	}
 }
 
-void AVRCharacter::MoveRight(float throttle)
+void AVRCharacter::MoveRight(float Throttle)
 {
-	AddMovementInput(throttle * Camera->GetRightVector());
+	if (FMath::Abs(Throttle) > 0.1)
+	{
+		AddMovementInput(Throttle * Camera->GetRightVector());
+	}
 }
 
 void AVRCharacter::BeginTeleport()
@@ -328,6 +338,7 @@ void AVRCharacter::UpdateCharacterVRRootLocation()
 		return;
 	}
 	VRRoot->AddWorldOffset(InvertCameraOffset);
+	// VRRoot->SetRelativeLocation(NewCameraOffset);
 }
 
 void AVRCharacter::StartFade(float FromAlpha, float ToAlpha)

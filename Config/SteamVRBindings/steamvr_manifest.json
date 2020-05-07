@@ -90,12 +90,8 @@
 			"type": "boolean"
 		},
 		{
-			"name": "/actions/main/in/Forward axis",
-			"type": "vector1"
-		},
-		{
-			"name": "/actions/main/in/Right axis",
-			"type": "vector1"
+			"name": "/actions/main/in/Move_X,Move_Y X Y_axis2d",
+			"type": "vector2"
 		}
 	],
 	"action_sets": [
@@ -215,8 +211,7 @@
 			"/actions/main/in/Teleport": "Teleport",
 			"/actions/main/in/GripLeft": "GripLeft",
 			"/actions/main/in/GripRight": "GripRight",
-			"/actions/main/in/Forward axis": "Forward",
-			"/actions/main/in/Right axis": "Right",
+			"/actions/main/in/Move_X,Move_Y X Y_axis2d": "Move",
 			"/actions/main": "Main Game Actions"
 		}
 	]

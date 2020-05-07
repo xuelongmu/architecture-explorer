@@ -41,28 +41,24 @@
 					}
 				},
 				{
-					"mode": "scalar_constant",
-					"path": "/user/hand/left/input/grip",
+					"mode": "trackpad",
+					"path": "/user/hand/right/input/trackpad",
 					"inputs":
 					{
-						"value":
+						"position":
 						{
-							"output": "/actions/main/in/Forward axis"
+							"output": "/actions/main/in/Move_X,Move_Y X Y_axis2d"
 						}
 					}
 				},
 				{
-					"mode": "dpad",
+					"mode": "joystick",
 					"path": "/user/hand/left/input/joystick",
-					"parameters":
-					{
-						"sub_mode": "click"
-					},
 					"inputs":
 					{
-						"north":
+						"position":
 						{
-							"output": "/actions/main/in/Forward axis"
+							"output": "/actions/main/in/Move_X,Move_Y X Y_axis2d"
 						}
 					}
 				}
